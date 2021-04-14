@@ -8,6 +8,11 @@
     <script type="text/javascript" src="jquery/bootstrap_3.3.0/js/bootstrap.min.js"></script>
 	<script type="text/javascript">
         $(function (){
+            // 如果当前页不是顶级窗口 就设置为顶级窗口
+            if (window.top!=window){
+                window.top.location = window.location;
+            }
+
             // 页面加载完毕用户名文本框自动清空
             $("#loginAct").val("");
 
@@ -47,7 +52,7 @@
                 dataType : "json",
                 success : function (data){
                     if (data.success){
-
+                        window.location.href = "${pageContext.request.contextPath}/workbench/index.jsp";
                     }else {
                         $("#msg").html(data.msg);
                     }
@@ -70,7 +75,7 @@
         <div class="page-header">
             <h1>登录</h1>
         </div>
-        <form action="workbench/index.html" class="form-horizontal" role="form">
+        <form action="workbench/index2.jsp" class="form-horizontal" role="form">
             <div class="form-group form-group-lg">
                 <div style="width: 350px;">
                     <input id="loginAct" class="form-control" type="text" placeholder="用户名">
