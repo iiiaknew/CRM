@@ -5,6 +5,174 @@
 
 <mapper namespace="com.iaknew.crm.workbench.dao.ActivityDao">
 
+    <select id="getActivityRelationByActivityName" resultType="com.iaknew.crm.workbench.domain.Activity">
+
+        select
+            a.id,
+            u.name as owner,
+            a.startDate,
+            a.endDate,
+            a.name
+
+        from tbl_activity a
+            join tbl_user u
+            on a.owner=u.id
+            join tbl_clue_activity_relation car
+            on car.clueId=#{clueId} and car.activityId=a.id and a.name like '%' #{activityName} '%'
+
+    </select>
+
+    <select id="getActivityRelation" resultType="com.iaknew.crm.workbench.domain.Activity">
+
+        select
+        a.id,
+        u.name as owner,
+        a.startDate,
+        a.endDate,
+        a.name
+
+        from tbl_activity a
+        join tbl_user u
+        on a.owner=u.id
+        join tbl_clue_activity_relation car
+        on car.clueId=#{clueId} and car.activityId=a.id
+
+    </select>
+
+    <select id="searchActivityByNameNoRelation" resultType="com.iaknew.crm.workbench.domain.Activity">
+
+        select
+            a.id,
+            a.name,
+            u.name as owner,
+            a.startDate,
+            a.endDate
+
+        from tbl_activity a join tbl_user u
+        on a.owner=u.id
+
+        where a.name like '%' #{activityName} '%' and a.id not in(
+            select activityId from tbl_clue_activity_relation where clueId=#{clueId}
+        )
+    </select>
+
+    <select id="getActivityNoRelation" resultType="com.iaknew.crm.workbench.domain.Activity">
+
+        select
+            a.id,
+            a.name,
+            u.name as owner,
+            a.startDate,
+            a.endDate
+
+        from tbl_activity a join tbl_user u
+        on a.owner=u.id
+        where a.id not in(
+            select activityId from tbl_clue_activity_relation where clueId=#{clueId}
+        )
+
+    </select>
+
+    <select id="getActivityListByClueId" resultType="com.iaknew.crm.workbench.domain.Activity">
+
+        select
+        car.id as id,
+        a.name,
+        u.name as owner,
+        a.startDate,
+        a.endDate
+
+        from tbl_activity a
+        join tbl_user u
+        on a.owner=u.id
+        join tbl_clue_activity_relation car
+        on a.id=car.activityId
+
+        where car.clueId=#{clueId}
+
+    </select>
+
+    <select id="detail" resultType="com.iaknew.crm.workbench.domain.Activity">
+        select
+        a.id,u.name as owner,a.name,a.startDate,a.endDate,a.cost,a.description,a.createTime,a.createBy,a.editTime,a.editBy
+        from tbl_activity a join tbl_user u
+        on a.owner = u.id
+        where a.id=#{id}
+    </select>
+
+    <update id="update">
+        update tbl_activity
+        set
+        owner=#{owner},name=#{name},startDate=#{startDate},endDate=#{endDate},
+            cost=#{cost},description=#{description},editBy=#{editBy},editTime=#{editTime}
+        where id=#{id}
+    </update>
+
+    <select id="getActivity" resultType="com.iaknew.crm.workbench.domain.Activity">
+        select * from tbl_activity where id = #{id}
+    </select>
+
+    <delete id="deleteActivity">
+        delete from tbl_activity
+        where id in
+        <foreach collection="array" item="aid" open="(" close=")" separator=",">
+            #{aid}
+        </foreach>
+    </delete>
+
+    <select id="getTotalByCondition" resultType="java.lang.Integer">
+        select count(*)
+        from tbl_activity a join tbl_user u
+        on a.owner = u.id
+        <where>
+            <if test="name!=null and name!=''">
+                a.name like '%' #{name} '%'
+            </if>
+
+            <if test="owner!=null and owner!=''">
+                and u.name like '%' #{owner} '%'
+            </if>
+
+            <if test="startDate!=null and startDate!=''">
+                and a.startDate &gt; #{startDate}
+            </if>
+
+            <if test="endDate!=null and endDate!=''">
+                and a.endDate &lt; #{endDate}
+            </if>
+        </where>
+    </select>
+
+    <select id="getActivityListByCondition" resultType="com.iaknew.crm.workbench.domain.Activity">
+
+        select a.id, a.name, u.name as owner, a.startDate, a.endDate
+        from tbl_activity a join tbl_user u
+        on a.owner = u.id
+
+        <where>
+            <if test="name!=null and name!=''">
+                a.name like '%' #{name} '%'
+            </if>
+
+            <if test="owner!=null and owner!=''">
+                and u.name like '%' #{owner} '%'
+            </if>
+
+            <if test="startDate!=null and startDate!=''">
+                and a.startDate &gt; #{startDate}
+            </if>
+
+            <if test="endDate!=null and endDate!=''">
+                and a.endDate &lt; #{endDate}
+            </if>
+        </where>
+
+        order by a.createTime desc
+
+        limit ${skipCount}, #{pageSize}
+
+    </select>
+
 	<insert id="save">
         insert into tbl_activity(
             id,

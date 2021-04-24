@@ -16,7 +16,6 @@ public class Activity {
     public Activity() {
     }
 
-
     public String getId() {
         return id;
     }
