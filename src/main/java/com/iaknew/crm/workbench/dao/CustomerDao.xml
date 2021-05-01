@@ -5,6 +5,12 @@
 
 <mapper namespace="com.iaknew.crm.workbench.dao.CustomerDao">
 
+    <select id="getCustomerName" resultType="java.lang.String">
+
+        select name from tbl_customer where name like '%' #{name} '%'
+
+    </select>
+
     <insert id="save">
 
         insert into tbl_customer(

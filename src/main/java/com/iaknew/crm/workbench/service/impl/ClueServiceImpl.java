@@ -23,6 +23,11 @@ public class ClueServiceImpl implements ClueService {
     private ContactsDao contactsDao = SqlSessionUtil.getSqlSession().getMapper(ContactsDao.class);
     private ContactsRemarkDao contactsRemarkDao = SqlSessionUtil.getSqlSession().getMapper(ContactsRemarkDao.class);
     private ContactsActivityRelationDao contactsActivityRelationDao = SqlSessionUtil.getSqlSession().getMapper(ContactsActivityRelationDao.class);
+
+    // 交易相关表
+    private TranDao tranDao = SqlSessionUtil.getSqlSession().getMapper(TranDao.class);
+    private TranHistoryDao tranHistoryDao = SqlSessionUtil.getSqlSession().getMapper(TranHistoryDao.class);
+
     @Override
     public boolean saveClue(Clue clue) {
         boolean flag = true;
@@ -174,12 +179,74 @@ public class ClueServiceImpl implements ClueService {
         }
 
         // (5) “线索和市场活动”的关系转换到“联系人和市场活动”的关系
-        // (6) 如果有创建交易需求，创建一条交易
-        // (7) 如果创建了交易，则创建一条该交易下的交易历史
-        // (8) 删除线索备注
-        // (9) 删除线索和市场活动的关系
-        // (10) 删除线索
+        // 获取线索和市场活动关联的对象
+        List<ClueActivityRelation> clueActivityRelationList = clueActivityRelationDao.getListById(clueId);
 
+        for (ClueActivityRelation clueActivityRelation : clueActivityRelationList){
+            String activityId = clueActivityRelation.getActivityId();
+
+            // 创建联系人和市场活动关联对象
+            ContactsActivityRelation contactsActivityRelation = new ContactsActivityRelation();
+            contactsActivityRelation.setActivityId(activityId);
+            contactsActivityRelation.setContactsId(contacts.getId());
+            contactsActivityRelation.setId(UUIDUtil.getUUID());
+
+            int count5 = contactsActivityRelationDao.save(contactsActivityRelation);
+            if (count5 != 1){
+                flag = false;
+            }
+        }
+
+        // (6) 如果有创建交易需求，创建一条交易
+        if (tran != null){
+            // tran已经封装好的信息：
+            // id,money,name,expectedDate,stage,activityId,createTime,createBy
+            tran.setSource(clue.getSource());
+            tran.setOwner(clue.getOwner());
+            tran.setNextContactTime(clue.getNextContactTime());
+            tran.setCustomerId(customer.getId());
+            tran.setContactSummary(clue.getContactSummary());
+            tran.setDescription(clue.getDescription());
+            tran.setContactsId(contacts.getId());
+
+            int count6 = tranDao.save(tran);
+            if (count6 != 1){
+                flag = false;
+            }
+
+            // (7) 如果创建了交易，则创建一条该交易下的交易历史
+            TranHistory tranHistory = new TranHistory();
+            tranHistory.setTranId(tran.getId());
+            tranHistory.setStage(tran.getStage());
+            tranHistory.setMoney(tran.getMoney());
+            tranHistory.setExpectedDate(tran.getExpectedDate());
+            tranHistory.setCreateTime(createTime);
+            tranHistory.setCreateBy(createBy);
+            tranHistory.setId(UUIDUtil.getUUID());
+
+            int count7 = tranHistoryDao.save(tranHistory);
+            if (count7 != 1){
+                flag = false;
+            }
+        }
+
+        // (8) 删除线索备注
+        int count8 = clueRemarkDao.delete(clueId);
+        if (count8 != clueRemarkList.size()){
+            flag = false;
+        }
+
+        // (9) 删除线索和市场活动的关系
+        int count9 = clueActivityRelationDao.delete(clueId);
+        if (count9 != clueActivityRelationList.size()){
+            flag = false;
+        }
+
+        // (10) 删除线索
+        int count10 = clueDao.delete(clueId);
+        if (count10 != 1){
+            flag = false;
+        }
 
         return flag;
     }

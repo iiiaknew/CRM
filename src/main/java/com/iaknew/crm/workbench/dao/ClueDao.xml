@@ -5,6 +5,12 @@
 
 <mapper namespace="com.iaknew.crm.workbench.dao.ClueDao">
 
+    <delete id="delete">
+
+        delete from tbl_clue where id=#{clueId}
+
+    </delete>
+
     <select id="getById" resultType="com.iaknew.crm.workbench.domain.Clue">
 
         select * from tbl_clue where id=#{clueId}

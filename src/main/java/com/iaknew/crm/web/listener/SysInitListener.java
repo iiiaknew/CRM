@@ -7,9 +7,7 @@ import com.iaknew.crm.utils.ServiceFactory;
 
 import javax.servlet.*;
 import javax.servlet.annotation.*;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @WebListener
 public class SysInitListener implements ServletContextListener{
@@ -39,5 +37,22 @@ public class SysInitListener implements ServletContextListener{
         for (String key : set){
             application.setAttribute(key, map.get(key));
         }
+
+        //----------------------------------------------------------------------------------
+        // 处理完数据字典 处理Stage2Possibility.properties文件
+        // 解析Stage2Possibility.properties文件
+        ResourceBundle rb = ResourceBundle.getBundle("Stage2Possibility");
+
+        Enumeration<String> e = rb.getKeys();
+        Map<String, String> pMap = new HashMap<>();
+        while (e.hasMoreElements()){
+            // 阶段
+            String key = e.nextElement();
+            // 可能性
+            String value = rb.getString(key);
+
+            pMap.put(key, value);
+        }
+        application.setAttribute("pMap", pMap);
     }
 }
