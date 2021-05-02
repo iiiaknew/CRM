@@ -5,6 +5,12 @@
 
 <mapper namespace="com.iaknew.crm.workbench.dao.TranDao">
 
+    <update id="changeStage">
+
+        update tbl_tran set stage=#{stage},editBy=#{editBy},editTime=#{editTime} where id=#{id}
+
+    </update>
+
     <select id="detail" resultType="com.iaknew.crm.workbench.domain.Tran">
 
         select

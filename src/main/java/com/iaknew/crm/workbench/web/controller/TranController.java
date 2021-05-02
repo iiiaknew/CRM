@@ -17,13 +17,16 @@ import com.iaknew.crm.workbench.domain.TranHistory;
 import javax.servlet.*;
 import javax.servlet.http.*;
 import javax.servlet.annotation.*;
+import javax.xml.ws.Service;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @WebServlet(name = "TranController", value = {
         "/workbench/transaction/create.do", "/workbench/transaction/getCustomerName.do", "/workbench/transaction/save.do",
-        "/workbench/transaction/detail.do", "/workbench/transaction/getHistoryListBiTranId.do"
+        "/workbench/transaction/detail.do", "/workbench/transaction/getHistoryListBiTranId.do", "/workbench/transaction/changeStage.do",
+        "/workbench/transaction/getCharts.do"
 })
 public class TranController extends HttpServlet {
     @Override
@@ -39,7 +42,59 @@ public class TranController extends HttpServlet {
             detail(request, response);
         }else if ("/workbench/transaction/getHistoryListBiTranId.do".equals(path)){
             getHistoryListBiTranId(request, response);
+        }else if ("/workbench/transaction/changeStage.do".equals(path)){
+            changeStage(request, response);
+        }else if ("/workbench/transaction/getCharts.do".equals(path)){
+            getCharts(request, response);
         }
+    }
+
+    private void getCharts(HttpServletRequest request, HttpServletResponse response) {
+        // 获取交易统计图表的数据
+        TranService ts = (TranService) ServiceFactory.getService(new TranServiceImpl());
+
+        Map<String, Object> map = ts.getCharts();
+
+        PrintJson.printJsonObj(response, map);
+    }
+
+    private void changeStage(HttpServletRequest request, HttpServletResponse response) {
+        // 修改交易阶段
+        System.out.println(1);
+        Map<String, String> pMap = (Map<String, String>) this.getServletContext().getAttribute("pMap");
+
+        String id = request.getParameter("id");
+        String stage = request.getParameter("stage");
+        String money = request.getParameter("money");
+        String expectedDate = request.getParameter("expectedDate");
+        String possibility = pMap.get(stage);
+        String editTime = DateTimeUtil.getSysTime();
+        String editBy = ((User) request.getSession().getAttribute("user")).getName();
+
+        Tran tran = new Tran();
+        tran.setId(id);
+        tran.setStage(stage);
+        tran.setPossibility(possibility);
+        tran.setEditBy(editBy);
+        tran.setEditTime(editTime);
+
+        TranHistory th = new TranHistory();
+        th.setId(UUIDUtil.getUUID());
+        th.setTranId(id);
+        th.setStage(stage);
+        th.setMoney(money);
+        th.setCreateTime(DateTimeUtil.getSysTime());
+        th.setCreateBy(editBy);
+        th.setExpectedDate(expectedDate);
+        th.setPossibility(possibility);
+
+        TranService ts = (TranService) ServiceFactory.getService(new TranServiceImpl());
+        boolean flag = ts.changeStage(tran, th);
+        Map<String, Object> map = new HashMap<>();
+        map.put("success", flag);
+        map.put("tran", tran);
+
+        PrintJson.printJsonObj(response, map);
     }
 
     private void getHistoryListBiTranId(HttpServletRequest request, HttpServletResponse response) {

@@ -11,7 +11,9 @@ import com.iaknew.crm.workbench.domain.Customer;
 import com.iaknew.crm.workbench.domain.Tran;
 import com.iaknew.crm.workbench.domain.TranHistory;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class TranServiceImpl implements TranService {
     private TranDao tranDao = SqlSessionUtil.getSqlSession().getMapper(TranDao.class);
@@ -82,5 +84,35 @@ public class TranServiceImpl implements TranService {
     @Override
     public List<TranHistory> getHistoryListBiTranId(String tranId) {
         return tranHistoryDao.getHistoryListBiTranId(tranId);
+    }
+
+    @Override
+    public boolean changeStage(Tran tran, TranHistory th) {
+        boolean flag = true;
+
+        int count1 = tranDao.changeStage(tran);
+        if (count1 != 1){
+            flag = false;
+        }
+
+        int count2 = tranHistoryDao.save(th);
+        if (count2 != 1){
+            flag = false;
+        }
+
+        return flag;
+    }
+
+    @Override
+    public Map<String, Object> getCharts() {
+        // 获取total
+        int total = tranHistoryDao.getTotal();
+        // 获取dataList
+        List<Map<String, Object>> dataList = tranHistoryDao.getCharts();
+
+        Map<String, Object> map = new HashMap<>();
+        map.put("total", total);
+        map.put("dataList", dataList);
+        return map;
     }
 }

@@ -1,4 +1,33 @@
+<%@ page import="com.iaknew.crm.settings.domain.DicValue" %>
+<%@ page import="java.util.List" %>
+<%@ page import="java.util.Map" %>
+<%@ page import="java.util.Set" %>
+<%@ page import="com.iaknew.crm.workbench.domain.Tran" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%
+    // 获取stage的dv对象集合
+    List<DicValue> dvList = (List<DicValue>) application.getAttribute("stage");
+    // 获取阶段对应可能性的map
+    Map<String, String> pMap = (Map<String, String>) application.getAttribute("pMap");
+
+    Set<String> set = pMap.keySet();
+
+    int point = 0;
+    for (int i=0; i<dvList.size(); i++){
+        // 获取每一个dicValue
+        DicValue dv = dvList.get(i);
+        // 获取dv对应的value
+        String stage = dv.getValue();
+        // 获取对应可能性
+        String possibility = pMap.get(stage);
+
+        if ("0".equals(possibility)){
+            // 如果可能性为零 找到了前面正常阶段和后面丢失阶段的临界点
+            point = i;
+            break;
+        }
+    }
+%>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -117,8 +146,141 @@
             })
         }
 
+        /*
+            方法：改变交易阶段
+            stage：需要改变的阶段
+            i：需要改变阶段的下标
+         */
+        function changeStage(stage, i){
+            //alert(stage);
+            //alert(i);
+            $.ajax({
+                url : "${pageContext.request.contextPath}/workbench/transaction/changeStage.do",
+                data : {
+                    "id" : "${tran.id}",
+                    "stage" : stage,
+                    "money" : "${tran.money}",    // 生成交易历史用
+                    "expectedDate" : "${tran.expectedDate}",    // 生成交易历史用
+                },
+                type : "post",
+                dataType : "json",
+                success : function (data){
+                    // data : {success:true/false, tran:tran}
+                    if (data.success){
+                        // 修改阶段成功后 需要局部刷新 阶段、可能性、修改人、修改时间
+                        $("#stage").html(data.tran.stage);
+                        $("#possibility").html(data.tran.possibility);
+                        $("#editBy").html(data.tran.editBy);
+                        $("#editTime").html(data.tran.editTime);
+
+                        // 修改阶段图标
+                        changeIcon(stage, i);
+                    }else {
+                        alert("修改失败");
+                    }
+                }
+            })
+        }
+
+        function changeIcon(stage, i){
+            // 当前阶段
+            var currentStage = stage;
+            // 当前可能性
+            var currentPossibility = $("#possibility").html();
+            // 当前阶段下标
+            var index = i;
+            // 正常阶段和后面丢失阶段的临界点
+            var point = "<%=point%>";
+
+            // 如果当前阶段可能性为0 说明是后两个阶段 前面七个阶段一定是黑圈 后面两个阶段 一个黑叉 一个红叉
+            if (currentPossibility == "0"){
+                // 遍历前七个阶段
+                for (var x=0; x<point; x++){
+                    // 黑圈-----------------------------------
+                    // 删除原有样式
+                    $("#"+x).removeClass();
+                    // 添加新样式
+                    $("#"+x).addClass("glyphicon glyphicon-record mystage")
+                    // 添加颜色
+                    $("#"+x).css("color", "#000000");
+                }
+
+                // 遍历后两个阶段
+                for (var x=point; x<<%=dvList.size()%>; x++){
+                    // 如果是当前阶段
+                    if (index == x){
+                        // 红叉-------------------------------
+                        // 删除原有样式
+                        $("#"+x).removeClass();
+                        // 添加新样式
+                        $("#"+x).addClass("glyphicon glyphicon-remove mystage")
+                        // 添加颜色
+                        $("#"+x).css("color", "#FF0000");
+
+                    // 如果不是当前阶段
+                    }else {
+                        // 黑叉-------------------------------
+                        // 删除原有样式
+                        $("#"+x).removeClass();
+                        // 添加新样式
+                        $("#"+x).addClass("glyphicon glyphicon-remove mystage")
+                        // 添加颜色
+                        $("#"+x).css("color", "#000000");
+                    }
+                }
+
+            // 如果当前阶段可能性不为0 说明是前七个阶段 前七个阶段可能是黑圈、绿色标记、绿圈 后两个阶段是黑叉
+            }else {
+                // 遍历前七个阶段
+                for (var x=0; x<point; x++){
+                    // 如果是当前阶段
+                    if (x == index){
+                        // 绿色标记----------------------------
+                        // 删除原有样式
+                        $("#"+x).removeClass();
+                        // 添加新样式
+                        $("#"+x).addClass("glyphicon glyphicon-map-marker mystage")
+                        // 添加颜色
+                        $("#"+x).css("color", "#90F790");
+
+                    // 如果小于当前阶段
+                    }else if (x < index){
+                        // 绿圈-------------------------------
+                        // 删除原有样式
+                        $("#"+x).removeClass();
+                        // 添加新样式
+                        $("#"+x).addClass("glyphicon glyphicon-ok-circle mystage")
+                        // 添加颜色
+                        $("#"+x).css("color", "#90F790");
+
+                    // 如果大于当前阶段
+                    }else {
+                        // 黑圈-------------------------------
+                        // 删除原有样式
+                        $("#"+x).removeClass();
+                        // 添加新样式
+                        $("#"+x).addClass("glyphicon glyphicon-record mystage")
+                        // 添加颜色
+                        $("#"+x).css("color", "#000000");
+                    }
+                }
+
+                // 遍历后两个阶段
+                for (var x=point; x<<%=dvList.size()%>; x++){
+                    // 黑叉-----------------------------------
+                    // 删除原有样式
+                    $("#"+x).removeClass();
+                    // 添加新样式
+                    $("#"+x).addClass("glyphicon glyphicon-remove mystage")
+                    // 添加颜色
+                    $("#"+x).css("color", "#000000");
+                }
+            }
+        }
+
 
     </script>
+    <title></title><title></title>
 
 </head>
 <body>
@@ -146,7 +308,137 @@
 <!-- 阶段状态 -->
 <div style="position: relative; left: 40px; top: -50px;">
     阶段&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <span class="glyphicon glyphicon-ok-circle mystage" data-toggle="popover" data-placement="bottom"
+    <%
+        // 准备当前阶段
+        Tran tran = (Tran) request.getAttribute("tran");
+        String currentStage = tran.getStage();
+        // 准备当前阶段的可能性
+        String currentPossibility = pMap.get(currentStage);
+
+        // 判断可能性
+        // 如果可能性为0 说明是最后两个阶段 前七个阶段都为黑圈 后两个阶段一个红叉一个黑叉
+        if ("0".equals(currentPossibility)){
+            for (int i=0; i<dvList.size(); i++){
+                // 遍历出每一个阶段
+                DicValue dv = dvList.get(i);
+                String listStage = dv.getValue();
+                String listPossibility = pMap.get(listStage);
+
+                // 判断可能性
+                // 如果遍历出来可能性为零 说明是后两个阶段 一个黑叉 一个红叉
+                if ("0".equals(listPossibility)){
+                    // 如果是当前阶段 红叉
+                    if (listStage.equals(currentStage)){
+                        // 红叉----------------------------------------
+
+    %>
+        <span id="<%=i%>" onclick="changeStage('<%=listStage%>', '<%=i%>')"
+              class="glyphicon glyphicon-remove mystage"
+              data-toggle="popover" data-placement="bottom"
+              data-content="<%=dv.getText()%>" style="color: #FF0000;"></span>
+        -----------
+    <%
+                    // 如果不是当前阶段
+                    }else {
+                        // 黑叉----------------------------------------
+    %>
+        <span id="<%=i%>" onclick="changeStage('<%=listStage%>', '<%=i%>')"
+              class="glyphicon glyphicon-remove mystage"
+              data-toggle="popover" data-placement="bottom"
+              data-content="<%=dv.getText()%>" style="color: #000000;"></span>
+        -----------
+    <%
+                    }
+
+                // 如果遍历出来可能性不为0 说明是前七个阶段 一定是黑圈
+                }else {
+                    // 黑圈--------------------------------------------
+    %>
+        <span id="<%=i%>" onclick="changeStage('<%=listStage%>', '<%=i%>')"
+              class="glyphicon glyphicon-record mystage"
+              data-toggle="popover" data-placement="bottom"
+              data-content="<%=dv.getText()%>" style="color: #000000;"></span>
+        -----------
+    <%
+                }
+            }
+        // 如果可能行不为0 说明是前七个阶段 前七个阶段可能是绿圈、黑圈、绿色标记 后两个阶段一定是黑叉
+        }else {
+            // 准备当前阶段的下标
+            int index = 0;
+
+            for (int i=0; i< dvList.size(); i++){
+                // 遍历出每一个阶段
+                DicValue dv = dvList.get(i);
+                String stage = dv.getValue();
+
+                // 如果遍历出来的是当前阶段
+                if (stage.equals(currentStage)){
+                    index = i;
+                    break;
+                }
+            }
+
+            for (int i=0; i<dvList.size(); i++){
+                // 遍历出每一个阶段
+                DicValue dv = dvList.get(i);
+                String listStage = dv.getValue();
+                String listPossibility = pMap.get(listStage);
+
+                // 如果遍历出来的阶段可能性为0 说明是后两个阶段 黑叉
+                if ("0".equals(listPossibility)){
+                    // 黑叉------------------------------------
+    %>
+        <span id="<%=i%>" onclick="changeStage('<%=listStage%>', '<%=i%>')"
+              class="glyphicon glyphicon-remove mystage"
+              data-toggle="popover" data-placement="bottom"
+              data-content="<%=dv.getText()%>" style="color: #000000;"></span>
+        -----------
+    <%
+
+                // 如果遍历出来的阶段可能性不为0 说明是前七个阶段
+                }else {
+                    // 如果是当前阶段
+                    if (i == index){
+                        // 绿色标记------------------------------------
+    %>
+        <span id="<%=i%>" onclick="changeStage('<%=listStage%>', '<%=i%>')"
+              class="glyphicon glyphicon-map-marker mystage"
+              data-toggle="popover" data-placement="bottom"
+              data-content="<%=dv.getText()%>" style="color: #90F790;"></span>
+        -----------
+    <%
+
+                    // 如果小于当前阶段
+                    }else if (i < index){
+                        // 绿圈---------------------------------------
+
+    %>
+        <span id="<%=i%>" onclick="changeStage('<%=listStage%>', '<%=i%>')"
+              class="glyphicon glyphicon-ok-circle mystage"
+              data-toggle="popover" data-placement="bottom"
+              data-content="<%=dv.getText()%>" style="color: #90F790;"></span>
+        -----------
+    <%
+
+                    // 如果大于当前阶段
+                    }else {
+                        // 黑圈----------------------------------------
+
+    %>
+        <span id="<%=i%>" onclick="changeStage('<%=listStage%>', '<%=i%>')"
+              class="glyphicon glyphicon-record mystage"
+              data-toggle="popover" data-placement="bottom"
+              data-content="<%=dv.getText()%>" style="color: #000000;"></span>
+        -----------
+    <%
+
+                    }
+                }
+            }
+        }
+    %>
+    <%--<span class="glyphicon glyphicon-ok-circle mystage" data-toggle="popover" data-placement="bottom"
           data-content="资质审查" style="color: #90F790;"></span>
     -----------
     <span class="glyphicon glyphicon-ok-circle mystage" data-toggle="popover" data-placement="bottom"
@@ -172,7 +464,7 @@
     -----------
     <span class="glyphicon glyphicon-record mystage" data-toggle="popover" data-placement="bottom"
           data-content="因竞争丢失关闭"></span>
-    -----------
+    -------------%>
     <span class="closingDate">2010-10-10</span>
 </div>
 
@@ -198,7 +490,7 @@
         <div style="width: 300px; color: #808080;">客户名称</div>
         <div style="width: 300px;position: relative; left: 200px; top: -20px;"><b>${tran.customerId}</b></div>
         <div style="width: 300px;position: relative; left: 450px; top: -40px; color: gray;">阶段</div>
-        <div style="width: 300px;position: relative; left: 650px; top: -60px;"><b>${tran.stage}</b></div>
+        <div style="width: 300px;position: relative; left: 650px; top: -60px;"><b id="stage">${tran.stage}</b></div>
         <div style="height: 1px; width: 400px; background: #D5D5D5; position: relative; top: -60px;"></div>
         <div style="height: 1px; width: 400px; background: #D5D5D5; position: relative; top: -60px; left: 450px;"></div>
     </div>
@@ -206,7 +498,7 @@
         <div style="width: 300px; color: gray;">类型</div>
         <div style="width: 300px;position: relative; left: 200px; top: -20px;"><b>${tran.type}</b></div>
         <div style="width: 300px;position: relative; left: 450px; top: -40px; color: gray;">可能性</div>
-        <div style="width: 300px;position: relative; left: 650px; top: -60px;"><b>${tran.possibility}</b></div>
+        <div style="width: 300px;position: relative; left: 650px; top: -60px;"><b id="possibility">${tran.possibility}</b></div>
         <div style="height: 1px; width: 400px; background: #D5D5D5; position: relative; top: -60px;"></div>
         <div style="height: 1px; width: 400px; background: #D5D5D5; position: relative; top: -60px; left: 450px;"></div>
     </div>
@@ -231,8 +523,7 @@
     </div>
     <div style="position: relative; left: 40px; height: 30px; top: 70px;">
         <div style="width: 300px; color: gray;">修改者</div>
-        <div style="width: 500px;position: relative; left: 200px; top: -20px;"><b>${tran.editBy}&nbsp;&nbsp;</b><small
-                style="font-size: 10px; color: gray;">${tran.editTime}</small></div>
+        <div style="width: 500px;position: relative; left: 200px; top: -20px;"><b id="editBy">${tran.editBy}&nbsp;&nbsp;</b><small style="font-size: 10px; color: gray;" id="editTime">${tran.editTime}</small></div>
         <div style="height: 1px; width: 550px; background: #D5D5D5; position: relative; top: -20px;"></div>
     </div>
     <div style="position: relative; left: 40px; height: 30px; top: 80px;">
